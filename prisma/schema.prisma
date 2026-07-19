@@ -1,0 +1,240 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  TEACHER
+  STUDENT
+  ADMIN
+}
+
+enum AssignmentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AttemptStatus {
+  DRAFT
+  SUBMITTED
+  RETURNED
+  RESUBMITTED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  INVITED
+  REMOVED
+}
+
+enum FeedbackStatus {
+  PENDING
+  COMPLETE
+  FAILED
+}
+
+model User {
+  id                    String       @id @default(uuid()) @db.Uuid
+  clerkId               String       @unique
+  email                 String       @unique
+  displayName           String?
+  role                  Role         @default(STUDENT)
+  imageUrl              String?
+  createdAt             DateTime     @default(now()) @db.Timestamptz(6)
+  memberships           Membership[]
+  classroomsTaught      Classroom[]  @relation("TeacherClassrooms")
+  readingsCreated       Reading[]    @relation("ReadingCreator")
+  attempts              Attempt[]
+  enrollments           Enrollment[]
+  auditEvents           AuditEvent[] @relation("AuditActor")
+}
+
+model Organization {
+  id            String       @id @default(uuid()) @db.Uuid
+  name          String
+  slug          String       @unique
+  retentionDays Int          @default(365)
+  aiEnabled     Boolean      @default(true)
+  createdAt     DateTime     @default(now()) @db.Timestamptz(6)
+  memberships   Membership[]
+  classrooms    Classroom[]
+  readings      Reading[]
+}
+
+model Membership {
+  userId         String       @db.Uuid
+  organizationId String       @db.Uuid
+  role           Role
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, organizationId])
+}
+
+model Classroom {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  teacherId      String       @db.Uuid
+  name           String
+  subject        String?
+  joinCode       String       @unique
+  archivedAt     DateTime?    @db.Timestamptz(6)
+  createdAt      DateTime     @default(now()) @db.Timestamptz(6)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  teacher        User         @relation("TeacherClassrooms", fields: [teacherId], references: [id])
+  enrollments    Enrollment[]
+  assignments    Assignment[]
+}
+
+model Enrollment {
+  classroomId String           @db.Uuid
+  studentId   String           @db.Uuid
+  status      EnrollmentStatus @default(ACTIVE)
+  joinedAt    DateTime         @default(now()) @db.Timestamptz(6)
+  classroom   Classroom        @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  student     User             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([classroomId, studentId])
+}
+
+model Reading {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  title          String
+  body           String
+  sourceLabel    String?
+  license        String?
+  createdById    String       @db.Uuid
+  createdAt      DateTime     @default(now()) @db.Timestamptz(6)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy      User         @relation("ReadingCreator", fields: [createdById], references: [id])
+  passages       Passage[]
+  assignments    Assignment[]
+}
+
+model Passage {
+  id          String         @id @default(uuid()) @db.Uuid
+  readingId   String         @db.Uuid
+  ordinal     Int
+  startOffset Int
+  endOffset   Int
+  text        String
+  label       String?
+  reading     Reading        @relation(fields: [readingId], references: [id], onDelete: Cascade)
+  evidence    EvidenceLink[]
+
+  @@unique([readingId, ordinal])
+}
+
+model Assignment {
+  id           String               @id @default(uuid()) @db.Uuid
+  classroomId  String               @db.Uuid
+  readingId    String               @db.Uuid
+  title        String
+  prompt       String
+  status       AssignmentStatus     @default(DRAFT)
+  dueAt        DateTime?            @db.Timestamptz(6)
+  settingsJson Json?
+  createdAt    DateTime             @default(now()) @db.Timestamptz(6)
+  classroom    Classroom            @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  reading      Reading              @relation(fields: [readingId], references: [id])
+  attempts     Attempt[]
+  signatures   ReasoningSignature[]
+}
+
+model Attempt {
+  id             String           @id @default(uuid()) @db.Uuid
+  assignmentId   String           @db.Uuid
+  studentId      String           @db.Uuid
+  status         AttemptStatus    @default(DRAFT)
+  currentVersion Int              @default(1)
+  submittedAt    DateTime?        @db.Timestamptz(6)
+  createdAt      DateTime         @default(now()) @db.Timestamptz(6)
+  assignment     Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student        User             @relation(fields: [studentId], references: [id])
+  versions       AttemptVersion[]
+
+  @@unique([assignmentId, studentId])
+  @@index([assignmentId, studentId])
+}
+
+model AttemptVersion {
+  id             String          @id @default(uuid()) @db.Uuid
+  attemptId      String          @db.Uuid
+  number         Int
+  claimText      String?
+  reflectionText String?
+  createdAt      DateTime        @default(now()) @db.Timestamptz(6)
+  attempt        Attempt         @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  evidenceLinks  EvidenceLink[]
+  coachFeedback  CoachFeedback[]
+
+  @@unique([attemptId, number])
+  @@index([attemptId, number])
+}
+
+model EvidenceLink {
+  id               String         @id @default(uuid()) @db.Uuid
+  attemptVersionId String         @db.Uuid
+  passageId        String         @db.Uuid
+  explanation      String
+  position         Int
+  attemptVersion   AttemptVersion @relation(fields: [attemptVersionId], references: [id], onDelete: Cascade)
+  passage          Passage        @relation(fields: [passageId], references: [id])
+
+  @@unique([attemptVersionId, position])
+}
+
+model CoachFeedback {
+  id               String              @id @default(uuid()) @db.Uuid
+  attemptVersionId String              @db.Uuid
+  model            String
+  promptVersion    String
+  resultJson       Json
+  status           FeedbackStatus      @default(PENDING)
+  latencyMs        Int?
+  createdAt        DateTime            @default(now()) @db.Timestamptz(6)
+  attemptVersion   AttemptVersion      @relation(fields: [attemptVersionId], references: [id], onDelete: Cascade)
+  signatures       FeedbackSignature[]
+}
+
+model ReasoningSignature {
+  id           String              @id @default(uuid()) @db.Uuid
+  assignmentId String              @db.Uuid
+  key          String
+  label        String
+  definition   String
+  severity     Int                 @default(1)
+  assignment   Assignment          @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  feedback     FeedbackSignature[]
+
+  @@unique([assignmentId, key])
+}
+
+model FeedbackSignature {
+  feedbackId  String             @db.Uuid
+  signatureId String             @db.Uuid
+  confidence  Float
+  feedback    CoachFeedback      @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  signature   ReasoningSignature @relation(fields: [signatureId], references: [id], onDelete: Cascade)
+
+  @@id([feedbackId, signatureId])
+}
+
+model AuditEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @db.Uuid
+  type       String
+  targetType String
+  targetId   String
+  metadata   Json?
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id])
+
+  @@index([targetType, targetId])
+}
