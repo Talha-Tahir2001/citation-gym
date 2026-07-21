@@ -24,6 +24,12 @@ enum AttemptStatus {
   SUBMITTED
   RETURNED
   RESUBMITTED
+  REVIEWED
+}
+
+enum TeacherReviewAction {
+  RETURNED
+  REVIEWED
 }
 
 enum EnrollmentStatus {
@@ -52,6 +58,7 @@ model User {
   attempts              Attempt[]
   enrollments           Enrollment[]
   auditEvents           AuditEvent[] @relation("AuditActor")
+  teacherReviews        TeacherReview[] @relation("TeacherReviews")
 }
 
 model Organization {
@@ -158,9 +165,25 @@ model Attempt {
   assignment     Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   student        User             @relation(fields: [studentId], references: [id])
   versions       AttemptVersion[]
+  teacherReviews TeacherReview[]
 
   @@unique([assignmentId, studentId])
   @@index([assignmentId, studentId])
+}
+
+model TeacherReview {
+  id               String              @id @default(uuid()) @db.Uuid
+  attemptId        String              @db.Uuid
+  attemptVersionId String              @db.Uuid
+  teacherId        String              @db.Uuid
+  action           TeacherReviewAction
+  note             String?
+  createdAt        DateTime            @default(now()) @db.Timestamptz(6)
+  attempt          Attempt             @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  attemptVersion   AttemptVersion      @relation(fields: [attemptVersionId], references: [id], onDelete: Cascade)
+  teacher          User                @relation("TeacherReviews", fields: [teacherId], references: [id])
+
+  @@index([attemptId, createdAt])
 }
 
 model AttemptVersion {
@@ -173,6 +196,7 @@ model AttemptVersion {
   attempt        Attempt         @relation(fields: [attemptId], references: [id], onDelete: Cascade)
   evidenceLinks  EvidenceLink[]
   coachFeedback  CoachFeedback[]
+  teacherReviews TeacherReview[]
 
   @@unique([attemptId, number])
   @@index([attemptId, number])
