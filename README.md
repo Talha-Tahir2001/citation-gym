@@ -3,6 +3,19 @@
 > **Train the reasoning behind the citation.**
 >
 > An AI-assisted learning workspace where students build source-grounded arguments and teachers see the complete reasoning trail—not just the final answer.
+>
+> Built for [Open AI Build Week](https://openai.devpost.com/) — Track 4: Education.
+
+> 🔗 **Repo:** https://github.com/Talha-Tahir2001/citation-gym
+> 
+> 🔗 **Links**
+>
+> 🌐 Live Demo: https://citation-gym.vercel.app/
+>
+> 🏆 Devpost Submission: https://devpost.com/software/citation-gym
+>
+
+---------------------------------------------------------------
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![React](https://img.shields.io/badge/React-19-61DAFB)
