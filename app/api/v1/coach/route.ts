@@ -2,11 +2,31 @@ import { fail, ok, requireUser } from "@/lib/api"
 import { prisma } from "@/lib/prisma"
 
 const signatures = {
-  UNSUPPORTED_INFERENCE: { label: "Inference presented as fact", definition: "The claim goes beyond what the cited passage directly supports." },
-  QUOTE_DUMP: { label: "Evidence needs explanation", definition: "Evidence is selected without explaining how it supports the claim." },
-  OVERBROAD_CLAIM: { label: "Claim is too broad", definition: "The claim needs to be narrowed to match the available evidence." },
-  COUNTEREVIDENCE_IGNORED: { label: "Counterevidence is missing", definition: "The reasoning should account for relevant limits or competing evidence." },
-  SOURCE_MISREAD: { label: "Source meaning was misread", definition: "The explanation does not accurately represent the cited passage." },
+  UNSUPPORTED_INFERENCE: {
+    label: "Inference presented as fact",
+    definition:
+      "The claim goes beyond what the cited passage directly supports.",
+  },
+  QUOTE_DUMP: {
+    label: "Evidence needs explanation",
+    definition:
+      "Evidence is selected without explaining how it supports the claim.",
+  },
+  OVERBROAD_CLAIM: {
+    label: "Claim is too broad",
+    definition:
+      "The claim needs to be narrowed to match the available evidence.",
+  },
+  COUNTEREVIDENCE_IGNORED: {
+    label: "Counterevidence is missing",
+    definition:
+      "The reasoning should account for relevant limits or competing evidence.",
+  },
+  SOURCE_MISREAD: {
+    label: "Source meaning was misread",
+    definition:
+      "The explanation does not accurately represent the cited passage.",
+  },
 } as const
 
 export async function POST(request: Request) {
@@ -96,12 +116,29 @@ export async function POST(request: Request) {
     )
   try {
     const raw = JSON.parse(content) as Record<string, unknown>
-    const signatureKey = typeof raw.signature === "string" && raw.signature in signatures ? raw.signature as keyof typeof signatures : "NONE"
+    const signatureKey =
+      typeof raw.signature === "string" && raw.signature in signatures
+        ? (raw.signature as keyof typeof signatures)
+        : "NONE"
     const result = {
       signature: signatureKey,
-      sourcePassageIds: Array.isArray(raw.sourcePassageIds) ? raw.sourcePassageIds.filter((id): id is string => typeof id === "string" && attempt.assignment.reading.passages.some((passage) => passage.id === id)) : [],
-      feedback: typeof raw.feedback === "string" && raw.feedback.trim() ? raw.feedback.trim().slice(0, 500) : "Check that your claim says only what your selected evidence supports.",
-      nextAction: typeof raw.nextAction === "string" && raw.nextAction.trim() ? raw.nextAction.trim().slice(0, 300) : "Revise one sentence to make the evidence-to-claim connection explicit.",
+      sourcePassageIds: Array.isArray(raw.sourcePassageIds)
+        ? raw.sourcePassageIds.filter(
+            (id): id is string =>
+              typeof id === "string" &&
+              attempt.assignment.reading.passages.some(
+                (passage) => passage.id === id
+              )
+          )
+        : [],
+      feedback:
+        typeof raw.feedback === "string" && raw.feedback.trim()
+          ? raw.feedback.trim().slice(0, 500)
+          : "Check that your claim says only what your selected evidence supports.",
+      nextAction:
+        typeof raw.nextAction === "string" && raw.nextAction.trim()
+          ? raw.nextAction.trim().slice(0, 300)
+          : "Revise one sentence to make the evidence-to-claim connection explicit.",
     }
     const feedback = await prisma.coachFeedback.create({
       data: {
@@ -116,8 +153,18 @@ export async function POST(request: Request) {
     if (signatureKey !== "NONE") {
       const definition = signatures[signatureKey]
       const signature = await prisma.reasoningSignature.upsert({
-        where: { assignmentId_key: { assignmentId: attempt.assignment.id, key: signatureKey } },
-        create: { assignmentId: attempt.assignment.id, key: signatureKey, label: definition.label, definition: definition.definition },
+        where: {
+          assignmentId_key: {
+            assignmentId: attempt.assignment.id,
+            key: signatureKey,
+          },
+        },
+        create: {
+          assignmentId: attempt.assignment.id,
+          key: signatureKey,
+          label: definition.label,
+          definition: definition.definition,
+        },
         update: { label: definition.label, definition: definition.definition },
       })
       await prisma.feedbackSignature.create({
