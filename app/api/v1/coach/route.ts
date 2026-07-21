@@ -1,33 +1,6 @@
 import { fail, ok, requireUser } from "@/lib/api"
+import { coachSignatures, runAgenticCoach } from "@/lib/agentic-coach"
 import { prisma } from "@/lib/prisma"
-
-const signatures = {
-  UNSUPPORTED_INFERENCE: {
-    label: "Inference presented as fact",
-    definition:
-      "The claim goes beyond what the cited passage directly supports.",
-  },
-  QUOTE_DUMP: {
-    label: "Evidence needs explanation",
-    definition:
-      "Evidence is selected without explaining how it supports the claim.",
-  },
-  OVERBROAD_CLAIM: {
-    label: "Claim is too broad",
-    definition:
-      "The claim needs to be narrowed to match the available evidence.",
-  },
-  COUNTEREVIDENCE_IGNORED: {
-    label: "Counterevidence is missing",
-    definition:
-      "The reasoning should account for relevant limits or competing evidence.",
-  },
-  SOURCE_MISREAD: {
-    label: "Source meaning was misread",
-    definition:
-      "The explanation does not accurately represent the cited passage.",
-  },
-} as const
 
 export async function POST(request: Request) {
   const user = await requireUser()
@@ -68,100 +41,41 @@ export async function POST(request: Request) {
       "Set AIMLAPI_KEY and AIMLAPI_MODEL on the server.",
       503
     )
-  const sourceSet = attempt.assignment.reading.passages
-    .map((passage) => `[${passage.id}] ${passage.text}`)
-    .join("\n\n")
   const startedAt = Date.now()
-  const response = await fetch(
-    `${process.env.AIMLAPI_BASE_URL ?? "https://api.aimlapi.com/v1"}/chat/completions`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.2,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are Citation Gym's source-grounded writing coach. Use only assigned passages; never rewrite the answer or add facts. Return valid JSON: signature (UNSUPPORTED_INFERENCE|QUOTE_DUMP|OVERBROAD_CLAIM|COUNTEREVIDENCE_IGNORED|SOURCE_MISREAD|NONE), sourcePassageIds (string[]), feedback (one short sentence), nextAction (exactly one specific action).",
-          },
-          {
-            role: "user",
-            content: `Passages:\n${sourceSet}\n\nClaim:\n${version.claimText}\n\nConnections:\n${version.evidenceLinks.map((link) => `[${link.passageId}] ${link.explanation}`).join("\n")}`,
-          },
-        ],
-      }),
-    }
-  )
-  if (!response.ok)
-    return fail(
-      "AI_PROVIDER_ERROR",
-      "The coaching provider could not complete this request.",
-      502
-    )
-  const completion = (await response.json()) as {
-    choices?: { message?: { content?: string } }[]
-  }
-  const content = completion.choices?.[0]?.message?.content
-  if (!content)
-    return fail(
-      "INVALID_AI_RESPONSE",
-      "The coaching provider returned an empty response.",
-      502
-    )
   try {
-    const raw = JSON.parse(content) as Record<string, unknown>
-    const signatureKey =
-      typeof raw.signature === "string" && raw.signature in signatures
-        ? (raw.signature as keyof typeof signatures)
-        : "NONE"
-    const result = {
-      signature: signatureKey,
-      sourcePassageIds: Array.isArray(raw.sourcePassageIds)
-        ? raw.sourcePassageIds.filter(
-            (id): id is string =>
-              typeof id === "string" &&
-              attempt.assignment.reading.passages.some(
-                (passage) => passage.id === id
-              )
-          )
-        : [],
-      feedback:
-        typeof raw.feedback === "string" && raw.feedback.trim()
-          ? raw.feedback.trim().slice(0, 500)
-          : "Check that your claim says only what your selected evidence supports.",
-      nextAction:
-        typeof raw.nextAction === "string" && raw.nextAction.trim()
-          ? raw.nextAction.trim().slice(0, 300)
-          : "Revise one sentence to make the evidence-to-claim connection explicit.",
-    }
+    const result = await runAgenticCoach({
+      apiKey,
+      baseUrl: process.env.AIMLAPI_BASE_URL ?? "https://api.aimlapi.com/v1",
+      model,
+      claimText: version.claimText,
+      passages: attempt.assignment.reading.passages,
+      evidence: version.evidenceLinks.map((link) => ({
+        passageId: link.passageId,
+        explanation: link.explanation,
+      })),
+    })
     const feedback = await prisma.coachFeedback.create({
       data: {
         attemptVersionId: version.id,
         model,
-        promptVersion: "v1",
+        promptVersion: "agentic-v2",
         resultJson: result as never,
         status: "COMPLETE",
         latencyMs: Date.now() - startedAt,
       },
     })
-    if (signatureKey !== "NONE") {
-      const definition = signatures[signatureKey]
+    if (result.signature !== "NONE") {
+      const definition = coachSignatures[result.signature]
       const signature = await prisma.reasoningSignature.upsert({
         where: {
           assignmentId_key: {
             assignmentId: attempt.assignment.id,
-            key: signatureKey,
+            key: result.signature,
           },
         },
         create: {
           assignmentId: attempt.assignment.id,
-          key: signatureKey,
+          key: result.signature,
           label: definition.label,
           definition: definition.definition,
         },
@@ -181,6 +95,15 @@ export async function POST(request: Request) {
         type: "COACH_FEEDBACK_CREATED",
         targetType: "CoachFeedback",
         targetId: feedback.id,
+        metadata: {
+          workflow: "agentic-coach-v1",
+          nodes: [
+            "verify_evidence",
+            "evaluate_alignment",
+            "coach",
+            "ground_feedback",
+          ],
+        },
       },
     })
     return ok({
