@@ -3,14 +3,28 @@
 > **Train the reasoning behind the citation.**
 >
 > An AI-assisted learning workspace where students build source-grounded arguments and teachers see the complete reasoning trail—not just the final answer.
+>
+> Built for [Open AI Build Week](https://openai.devpost.com/) — Track 4: Education.
+
+> 🔗 **Repo:** https://github.com/Talha-Tahir2001/citation-gym
+> 
+> 🔗 **Links**
+>
+> 🌐 Live Demo: https://citation-gym.vercel.app/
+>
+> 🏆 Devpost Submission: https://devpost.com/software/citation-gym
+>
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![React](https://img.shields.io/badge/React-19-61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6)
+![OpenAI](https://img.shields.io/badge/AI-OpenAI-10A37F)
 ![Prisma](https://img.shields.io/badge/Prisma-7-2D3748)
 ![Neon](https://img.shields.io/badge/Database-Neon_PostgreSQL-00E699)
 ![Clerk](https://img.shields.io/badge/Auth-Clerk-6C47FF)
 ![AI/ML API](https://img.shields.io/badge/AI-AI%2FML_API-10A37F)
+
+---------------------------------------------------------------
 
 Citation Gym helps students move beyond dropping quotations into an answer. They select passages, make a claim, explain the connection, receive bounded AI coaching, submit work, and revise after teacher feedback. Teachers create classrooms and assignments, review the complete trail, return actionable notes, and identify recurring reasoning patterns.
 
@@ -344,4 +358,4 @@ Before sharing or deploying, verify:
 
 ## License
 
-This repository does not currently declare a license. Add one before distributing the project publicly.
+This project is open-source and available under the [MIT License](https://github.com/Talha-Tahir2001/citation-gym/blob/main/LICENSE).
