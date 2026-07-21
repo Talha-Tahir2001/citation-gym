@@ -33,6 +33,11 @@ export async function GET(
         },
         orderBy: { number: "desc" },
       },
+      teacherReviews: {
+        where: { action: "RETURNED" },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
     },
   })
   return attempt ? ok(attempt) : fail("NOT_FOUND", "Attempt not found.", 404)

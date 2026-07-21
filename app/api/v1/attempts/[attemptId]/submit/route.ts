@@ -25,7 +25,7 @@ export async function POST(
   const submitted = await prisma.attempt.update({
     where: { id: attemptId },
     data: {
-      status: "SUBMITTED",
+      status: version.number > 1 ? "RESUBMITTED" : "SUBMITTED",
       submittedAt: new Date(),
       currentVersion: version.number,
     },
