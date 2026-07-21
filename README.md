@@ -1,10 +1,45 @@
-# Citation Gym
+# Citation Gym 🏋️‍♀️
 
-> A source-grounded reasoning workspace where students build evidence-backed arguments and teachers review the full reasoning trail.
+> **Train the reasoning behind the citation.**
+>
+> An AI-assisted learning workspace where students build source-grounded arguments and teachers see the complete reasoning trail—not just the final answer.
 
-Citation Gym helps students move beyond dropping quotations into an answer. Students select passages, make a claim, explain the connection, receive bounded AI coaching, submit their work, and revise it when a teacher returns it. Teachers create classrooms and assignments, review submissions, return actionable feedback, and see recurring reasoning patterns.
+![Next.js](https://img.shields.io/badge/Next.js-16-black)
+![React](https://img.shields.io/badge/React-19-61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6)
+![Prisma](https://img.shields.io/badge/Prisma-7-2D3748)
+![Neon](https://img.shields.io/badge/Database-Neon_PostgreSQL-00E699)
+![Clerk](https://img.shields.io/badge/Auth-Clerk-6C47FF)
+![AI/ML API](https://img.shields.io/badge/AI-AI%2FML_API-10A37F)
 
-## Highlights
+Citation Gym helps students move beyond dropping quotations into an answer. They select passages, make a claim, explain the connection, receive bounded AI coaching, submit work, and revise after teacher feedback. Teachers create classrooms and assignments, review the complete trail, return actionable notes, and identify recurring reasoning patterns.
+
+## Table of contents
+
+- [Why Citation Gym](#why-citation-gym)
+- [Features](#features)
+- [Product flow](#product-flow)
+- [Architecture](#architecture)
+- [Data model](#data-model)
+- [Attempt lifecycle](#attempt-lifecycle)
+- [Tech stack](#tech-stack)
+- [Local setup](#local-setup)
+- [Roles and permissions](#roles-and-permissions)
+- [AI coaching contract](#ai-coaching-contract)
+- [Deployment on Vercel](#deployment-on-vercel)
+- [Key technical decisions](#key-technical-decisions)
+- [Known limitations and roadmap](#known-limitations-and-roadmap)
+
+## Why Citation Gym
+
+Most writing tools evaluate the finished paragraph. Citation Gym makes the **reasoning process** visible: the claim, the selected evidence, the student’s explanation, the AI coach’s bounded prompt, and the revision history are all first-class data.
+
+That creates two complementary experiences:
+
+- **Students** get a coach that points to the next reasoning move instead of silently supplying an answer.
+- **Teachers** can inspect exactly how a student connected evidence to a claim, return work with a focused note, and preserve the before/after revision trail.
+
+## Features
 
 - Role-aware Teacher and Student workspaces with Clerk authentication.
 - Classroom creation, generated join codes, and student enrollment.
@@ -13,6 +48,10 @@ Citation Gym helps students move beyond dropping quotations into an answer. Stud
 - AI/ML API coaching constrained to the assigned source set.
 - Teacher review workflow: mark reviewed or return for revision with a required note.
 - Prisma + Neon PostgreSQL persistence, audit events, and Vercel-ready client generation.
+
+### What makes the AI different
+
+The coach is intentionally constrained. It receives the assignment’s passages, the student’s claim, and their chosen evidence explanations—not open-web context or another student’s work. The response is normalized into structured feedback, a specific next action, and (when applicable) a reusable reasoning signature for teacher insight.
 
 ## Product flow
 
@@ -94,6 +133,16 @@ stateDiagram-v2
 | ORM | Prisma 7 with `@prisma/adapter-pg` |
 | AI coaching | AI/ML API-compatible chat-completions endpoint |
 | Themes | `next-themes` |
+
+## Feature map
+
+| Surface | Student experience | Teacher experience |
+| --- | --- | --- |
+| Classrooms | Join with a code and view enrolled classes | Create classes and share generated codes |
+| Assignments | Read source passages and open work | Create and publish prompt + source set |
+| Reasoning | Save claims, evidence connections, drafts, and revisions | Inspect each attempt and its linked evidence |
+| Feedback | Receive AI coaching and latest return note | Mark reviewed or return work with a required note |
+| Persistence | Resume the latest attempt version | See submission status and review history |
 
 ## Local setup
 
@@ -231,6 +280,42 @@ Recognized signatures include unsupported inference, evidence without explanatio
 4. Apply production migrations with `npm run prisma:deploy` from a controlled deployment step or CI workflow.
 
 For production, use a Neon pooled connection string appropriate for serverless workloads and keep secrets scoped to the required Vercel environments.
+
+## Key technical decisions
+
+### Prisma Client is generated at build time
+
+Prisma 7 generates the client into `app/generated/prisma`, which is intentionally ignored by Git. The `postinstall` script runs `prisma generate` locally and on Vercel so every build uses a client matching the committed schema and migrations.
+
+### Evidence links are separate from the claim
+
+An `AttemptVersion` stores the claim and reflection, while each `EvidenceLink` records a specific passage, explanation, and position. This makes the evidence graph inspectable and gives the AI coach grounded context rather than a single opaque answer field.
+
+### Revision history is immutable
+
+When a teacher returns work, starting a revision clones the latest attempt version. The original submitted work remains available for teacher review, while the student edits and resubmits a new version.
+
+### AI feedback is bounded and auditable
+
+The coach route validates provider output before persistence, filters passage references to the assignment’s source set, and records audit events. The provider can be swapped later because the application uses an OpenAI-compatible chat-completions boundary.
+
+## Known limitations and roadmap
+
+### Current limitations
+
+- Organization and AI settings routes exist but their dynamic settings UI is still planned.
+- Teacher insights are built around saved reasoning signatures; richer aggregate visualizations are a natural next step.
+- AI coaching is a structured single-call workflow today, not a multi-agent orchestration system.
+- There is no automated test suite yet; validation currently relies on type checks plus end-to-end manual role testing.
+
+### Next slices
+
+- [ ] Dynamic Profile, Organization, and AI-control settings.
+- [ ] Teacher insight dashboard with signature trends across a class.
+- [ ] Rubric-aware feedback and teacher-configured criteria.
+- [ ] Math-aware verification tools for algebra and calculation assignments.
+- [ ] Evaluation fixtures for AI feedback quality and source grounding.
+- [ ] Controlled multi-step/LangGraph coaching workflow, if the product needs deeper tool use.
 
 ## Project structure
 
