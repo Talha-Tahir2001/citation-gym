@@ -6,6 +6,12 @@ import { useParams } from "next/navigation"
 import { IconArrowRight, IconCheck, IconSparkles } from "@tabler/icons-react"
 
 import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 
 type AttemptData = {
   status: "DRAFT" | "SUBMITTED" | "RETURNED" | "RESUBMITTED" | "REVIEWED"
@@ -18,7 +24,13 @@ type AttemptData = {
     claimText: string | null
     reflectionText: string | null
     evidenceLinks: { passageId: string; explanation: string }[]
-    coachFeedback: { resultJson: { feedback?: string; nextAction?: string } }[]
+    coachFeedback: {
+      resultJson: {
+        alignmentSummary?: string
+        feedback?: string
+        nextAction?: string
+      }
+    }[]
   }[]
   teacherReviews: { note: string | null }[]
 }
@@ -33,6 +45,7 @@ export default function ReasoningStudioPage() {
   const [coaching, setCoaching] = useState(false)
   const [coachError, setCoachError] = useState<string | null>(null)
   const [coach, setCoach] = useState<{
+    alignmentSummary?: string
     feedback?: string
     nextAction?: string
   } | null>(null)
@@ -156,15 +169,25 @@ export default function ReasoningStudioPage() {
           />
         </label>
         {coach && (
-          <div className="mt-6 rounded-xl border border-primary/35 bg-primary/10 p-4">
-            <div className="flex gap-3">
-              <IconSparkles className="shrink-0 text-primary" />
+          <Card className="mt-6 border-primary/35 bg-primary/10">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <IconSparkles data-icon="inline-start" /> AI coaching
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              {coach.alignmentSummary ? (
+                <p className="text-sm leading-6 text-muted-foreground">
+                  <strong className="text-foreground">Evidence alignment:</strong>{" "}
+                  {coach.alignmentSummary}
+                </p>
+              ) : null}
               <p className="text-sm leading-6">
                 <strong>{coach.feedback}</strong>
                 {coach.nextAction && <> {coach.nextAction}</>}
               </p>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         )}
         {attempt.status === "RETURNED" ? (
           <div className="mt-6 rounded-xl border border-primary/35 bg-primary/10 p-4">
