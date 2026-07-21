@@ -8,6 +8,7 @@ import { IconArrowRight, IconCheck, IconSparkles } from "@tabler/icons-react"
 import { Button } from "@/components/ui/button"
 
 type AttemptData = {
+  status: "DRAFT" | "SUBMITTED" | "RETURNED" | "RESUBMITTED" | "REVIEWED"
   assignment: {
     title: string
     prompt: string
@@ -19,6 +20,7 @@ type AttemptData = {
     evidenceLinks: { passageId: string; explanation: string }[]
     coachFeedback: { resultJson: { feedback?: string; nextAction?: string } }[]
   }[]
+  teacherReviews: { note: string | null }[]
 }
 
 export default function ReasoningStudioPage() {
@@ -67,14 +69,28 @@ export default function ReasoningStudioPage() {
     setSaving(false)
   }
   const requestCoach = async () => {
-    setCoachError(null); setCoaching(true)
+    setCoachError(null)
+    setCoaching(true)
     try {
       await save()
-      const response = await fetch("/api/v1/coach", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ attemptId }) })
+      const response = await fetch("/api/v1/coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attemptId }),
+      })
       const result = await response.json()
-      if (!response.ok) { setCoachError(result.error?.message ?? "Coaching is unavailable right now."); return }
+      if (!response.ok) {
+        setCoachError(
+          result.error?.message ?? "Coaching is unavailable right now."
+        )
+        return
+      }
       setCoach(result.data?.feedback ?? null)
-    } catch { setCoachError("Unable to reach the coaching service.") } finally { setCoaching(false) }
+    } catch {
+      setCoachError("Unable to reach the coaching service.")
+    } finally {
+      setCoaching(false)
+    }
   }
   return (
     <div className="grid gap-6 xl:grid-cols-[.9fr_1.1fr]">
@@ -150,6 +166,22 @@ export default function ReasoningStudioPage() {
             </div>
           </div>
         )}
+        {attempt.status === "RETURNED" ? (
+          <div className="mt-6 rounded-xl border border-primary/35 bg-primary/10 p-4">
+            <p className="font-medium">Your teacher requested a revision</p>
+            <p className="mt-2 text-sm">{attempt.teacherReviews[0]?.note}</p>
+            <Button
+              className="mt-4"
+              variant="outline"
+              nativeButton={false}
+              render={
+                <Link href={`/app/student/attempts/${attemptId}/review`} />
+              }
+            >
+              Review feedback and start revision
+            </Button>
+          </div>
+        ) : null}
         <div className="mt-6 flex flex-wrap gap-3">
           <Button variant="outline" disabled={saving} onClick={save}>
             {saving ? "Saving…" : "Save draft"}
@@ -158,7 +190,8 @@ export default function ReasoningStudioPage() {
             disabled={!claim || selected.length === 0 || coaching || saving}
             onClick={requestCoach}
           >
-            {coaching ? "Coaching…" : "Coach me"} <IconSparkles data-icon="inline-end" />
+            {coaching ? "Coaching…" : "Coach me"}{" "}
+            <IconSparkles data-icon="inline-end" />
           </Button>
           <Button
             nativeButton={false}
@@ -167,7 +200,9 @@ export default function ReasoningStudioPage() {
             Review <IconArrowRight data-icon="inline-end" />
           </Button>
         </div>
-        {coachError ? <p className="mt-3 text-sm text-destructive">{coachError}</p> : null}
+        {coachError ? (
+          <p className="mt-3 text-sm text-destructive">{coachError}</p>
+        ) : null}
       </section>
     </div>
   )

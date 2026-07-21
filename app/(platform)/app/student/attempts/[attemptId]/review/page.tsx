@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { SubmitAttemptButton } from "@/components/submit-attempt-button"
 import { getCurrentAppUser } from "@/lib/current-app-user"
 import { prisma } from "@/lib/prisma"
+import { StartRevisionButton } from "@/components/start-revision-button"
 
 export default async function AttemptReviewPage({
   params,
@@ -24,6 +25,11 @@ export default async function AttemptReviewPage({
           coachFeedback: { orderBy: { createdAt: "desc" } },
         },
         orderBy: { number: "desc" },
+        take: 1,
+      },
+      teacherReviews: {
+        where: { action: "RETURNED" },
+        orderBy: { createdAt: "desc" },
         take: 1,
       },
     },
@@ -79,9 +85,19 @@ export default async function AttemptReviewPage({
             </div>
           </div>
         ) : null}
-        {attempt.status === "SUBMITTED" ? (
+        {attempt.status === "RETURNED" ? (
+          <>
+            <div className="mt-6 rounded-xl border border-primary/35 bg-primary/10 p-4">
+              <p className="font-medium">Your teacher requested a revision</p>
+              <p className="mt-2 text-sm">{attempt.teacherReviews[0]?.note}</p>
+            </div>
+            <StartRevisionButton attemptId={attempt.id} />
+          </>
+        ) : attempt.status === "SUBMITTED" ||
+          attempt.status === "RESUBMITTED" ||
+          attempt.status === "REVIEWED" ? (
           <p className="mt-6 font-medium text-primary">
-            Submitted successfully.
+            {attempt.status.toLowerCase()}.
           </p>
         ) : (
           <SubmitAttemptButton attemptId={attempt.id} />

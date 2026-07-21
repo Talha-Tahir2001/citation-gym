@@ -5,6 +5,7 @@ import { Role } from "@/app/generated/prisma/client"
 import { Button } from "@/components/ui/button"
 import { getCurrentAppUser } from "@/lib/current-app-user"
 import { prisma } from "@/lib/prisma"
+import { TeacherReviewControls } from "@/components/teacher-review-controls"
 
 export default async function TeacherSubmissionPage({
   params,
@@ -29,6 +30,10 @@ export default async function TeacherSubmissionPage({
         },
         orderBy: { number: "desc" },
         take: 1,
+      },
+      teacherReviews: {
+        include: { teacher: { select: { displayName: true, email: true } } },
+        orderBy: { createdAt: "desc" },
       },
     },
   })
@@ -115,6 +120,28 @@ export default async function TeacherSubmissionPage({
               No AI coaching feedback has been requested yet.
             </p>
           )}
+        </div>
+      </section>
+      <TeacherReviewControls attemptId={attempt.id} />
+      <section className="mt-6 rounded-2xl border bg-card p-6">
+        <h2 className="font-heading text-xl font-bold">Review history</h2>
+        <div className="mt-4 flex flex-col gap-3">
+          {attempt.teacherReviews.map((review) => (
+            <div key={review.id} className="rounded-xl bg-secondary p-4">
+              <p className="font-medium">
+                {review.action.toLowerCase()} ·{" "}
+                {review.teacher.displayName ?? review.teacher.email}
+              </p>
+              {review.note ? (
+                <p className="mt-2 text-sm">{review.note}</p>
+              ) : null}
+            </div>
+          ))}
+          {!attempt.teacherReviews.length ? (
+            <p className="text-sm text-muted-foreground">
+              No teacher feedback yet.
+            </p>
+          ) : null}
         </div>
       </section>
     </div>
