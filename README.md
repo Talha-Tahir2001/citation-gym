@@ -7,6 +7,7 @@
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![React](https://img.shields.io/badge/React-19-61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6)
+![OpenAI](https://img.shields.io/badge/AI-OpenAI-10A37F)
 ![Prisma](https://img.shields.io/badge/Prisma-7-2D3748)
 ![Neon](https://img.shields.io/badge/Database-Neon_PostgreSQL-00E699)
 ![Clerk](https://img.shields.io/badge/Auth-Clerk-6C47FF)
