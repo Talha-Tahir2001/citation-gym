@@ -15,8 +15,6 @@
 > 🏆 Devpost Submission: https://devpost.com/software/citation-gym
 >
 
----------------------------------------------------------------
-
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![React](https://img.shields.io/badge/React-19-61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6)
@@ -25,6 +23,8 @@
 ![Neon](https://img.shields.io/badge/Database-Neon_PostgreSQL-00E699)
 ![Clerk](https://img.shields.io/badge/Auth-Clerk-6C47FF)
 ![AI/ML API](https://img.shields.io/badge/AI-AI%2FML_API-10A37F)
+
+---------------------------------------------------------------
 
 Citation Gym helps students move beyond dropping quotations into an answer. They select passages, make a claim, explain the connection, receive bounded AI coaching, submit work, and revise after teacher feedback. Teachers create classrooms and assignments, review the complete trail, return actionable notes, and identify recurring reasoning patterns.
 
