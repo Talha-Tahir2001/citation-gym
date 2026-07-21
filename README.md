@@ -344,4 +344,4 @@ Before sharing or deploying, verify:
 
 ## License
 
-This repository does not currently declare a license. Add one before distributing the project publicly.
+This project is open-source and available under the [MIT License](https://github.com/Talha-Tahir2001/citation-gym/blob/main/LICENSE).
